@@ -43,7 +43,7 @@
     "publish": {
       "provider": "github",
       "owner": "Milton-dev-joey",
-      "repo": "劳动案件管理系统"
+      "repo": "labor-case-management"
     }
   }
 }
