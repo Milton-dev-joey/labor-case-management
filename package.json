@@ -38,7 +38,7 @@
       ]
     },
     "portable": {
-      "artifactName": "劳动案件管理系统-${version}-portable.exe"
+      "artifactName": "labor-case-management-${version}-portable.exe"
     },
     "publish": {
       "provider": "github",

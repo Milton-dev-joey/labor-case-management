@@ -27,9 +27,36 @@ jobs:
         run: npm ci
 
       - name: Build portable exe
-        run: npx electron-builder --win portable
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win portable --publish never
+
+      - name: List dist folder
+        run: dir dist
+
+      - name: Generate latest.yml for auto-updates
+        shell: pwsh
+        run: |
+          $exeFile = Get-ChildItem "dist\*.exe" | Select-Object -First 1
+          $exeName = $exeFile.Name
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $size = $exeFile.Length
+          $hashBytes = [System.Security.Cryptography.SHA512]::Create().ComputeHash([System.IO.File]::ReadAllBytes($exeFile.FullName))
+          $sha512 = [Convert]::ToBase64String($hashBytes)
+          $releaseDate = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+          $yaml = @"
+          version: $version
+          files:
+            - url: $exeName
+              sha512: $sha512
+              size: $size
+          path: $exeName
+          sha512: $sha512
+          releaseDate: '$releaseDate'
+          "@
+          # Remove leading spaces from heredoc
+          $yaml = ($yaml -split "`n" | ForEach-Object { $_ -replace '^\s{10}', '' }) -join "`n"
+          $yaml | Out-File -FilePath "dist\latest.yml" -Encoding utf8NoBOM
+          Write-Host "Generated dist\latest.yml:"
+          Get-Content "dist\latest.yml"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -54,7 +81,7 @@ jobs:
             ## 劳动案件管理系统 ${{ github.ref_name }}
 
             ### 下载安装
-            点击下方 `劳动案件管理系统-*-portable.exe` 文件下载，双击即可运行，**无需安装**。
+            点击下方 `labor-case-management-*-portable.exe` 文件下载，双击即可运行，**无需安装**。
 
             > 首次运行时 Windows 可能弹出安全提示，点击「更多信息」→「仍要运行」即可。
 
