@@ -1,0 +1,49 @@
+{
+  "name": "labor-case-manager",
+  "version": "1.0.0",
+  "productName": "劳动案件管理系统",
+  "description": "劳动案件管理系统 - 律师个人案件管理桌面应用",
+  "author": "Milton-dev-joey",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "electron-updater": "6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.miltondevjoey.labor-case-manager",
+    "productName": "劳动案件管理系统",
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "main.js",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "劳动案件管理系统-${version}-portable.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Milton-dev-joey",
+      "repo": "劳动案件管理系统"
+    }
+  }
+}

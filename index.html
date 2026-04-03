@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>劳动案件管理系统</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- 顶栏 -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">⚖️</div>
+      <h1 class="app-title">劳动案件管理</h1>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-outline" id="btnHandler">办案人管理</button>
+      <button class="btn btn-outline" id="btnParty">我方主体管理</button>
+    </div>
+  </header>
+
+  <!-- 主体内容 -->
+  <main class="main">
+    <!-- 搜索 + 过滤 -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#94A3B8" stroke-width="1.5"/><path d="M14 14l3 3" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="搜索案件名称、案由、当事人…" />
+      </div>
+      <button class="btn btn-primary" id="btnNewCase">＋ 新建案件</button>
+      <button class="btn btn-outline" id="btnBatchImport">案件批量录入</button>
+      <div class="filter-tabs" id="filterTabs">
+        <button class="tab active" data-status="all">全部</button>
+        <button class="tab" data-status="进行中">进行中</button>
+        <button class="tab" data-status="已结案">已结案</button>
+      </div>
+    </div>
+
+    <!-- 卡片区 -->
+    <div class="cards-grid" id="cardsGrid"></div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-icon">📂</div>
+      <p>暂无案件，点击「新建案件」开始</p>
+    </div>
+  </main>
+
+  <!-- ===== 案件表单 Modal ===== -->
+  <div class="modal-overlay" id="caseModal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="caseModalTitle">新建案件</h2>
+        <button class="modal-close" id="closeCaseModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="caseForm" novalidate>
+          <input type="hidden" id="caseId" />
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>案件名称 <span class="required">*</span></label>
+              <input type="text" id="caseName" placeholder="请输入案件名称" />
+              <span class="field-error" id="caseNameErr"></span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>案号</label>
+              <input type="text" id="caseNumber" placeholder="如：京朝劳仲案字[2024]第1234号" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>案由</label>
+              <input type="text" id="causeOfAction" placeholder="如：劳动合同纠纷" />
+            </div>
+            <div class="form-group">
+              <label>案件阶段</label>
+              <div class="radio-group">
+                <label class="radio-label"><input type="radio" name="stage" value="仲裁" checked /> 仲裁</label>
+                <label class="radio-label"><input type="radio" name="stage" value="一审" /> 一审</label>
+                <label class="radio-label"><input type="radio" name="stage" value="二审" /> 二审</label>
+                <label class="radio-label"><input type="radio" name="stage" value="再审" /> 再审</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>我方主体</label>
+              <div id="myPartiesContainer"></div>
+              <button type="button" class="btn btn-ghost btn-sm btn-add-party" id="btnAddPartyRow">＋ 添加主体</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>对方主体</label>
+              <input type="text" id="oppositeParty" placeholder="请输入对方当事人" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>开庭地点</label>
+              <input type="text" id="courtLocation" placeholder="如：北京市朝阳区劳动仲裁委" />
+            </div>
+            <div class="form-group">
+              <label>办案人</label>
+              <input type="text" id="handler" placeholder="负责律师姓名" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>开庭日期</label>
+              <input type="date" id="courtDate" />
+            </div>
+            <div class="form-group">
+              <label>举证期限（天）</label>
+              <div class="evidence-days-wrap">
+                <input type="number" id="evidenceDays" min="1" max="365" placeholder="如：15" />
+                <span class="evidence-hint" id="evidenceHint"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>诉讼请求</label>
+              <textarea id="claims" rows="4" placeholder="请输入诉讼请求内容…"></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>案件状态</label>
+              <select id="caseStatus">
+                <option value="进行中">进行中</option>
+                <option value="已结案">已结案</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>案件类型</label>
+              <select id="caseType">
+                <option value="">-- 请选择 --</option>
+                <option value="雇员">雇员</option>
+                <option value="非雇员">非雇员</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 附件 -->
+          <div class="form-row">
+            <div class="form-group full">
+              <label>附件</label>
+              <div class="attachment-area">
+                <button type="button" class="btn btn-outline btn-sm" id="btnAddAttachment">＋ 添加文件</button>
+                <input type="file" id="attachmentInput" multiple style="display:none" />
+                <p class="attach-hint">仅记录文件名，不存储文件内容</p>
+                <ul class="attachment-list" id="attachmentList"></ul>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="deleteCaseBtn" style="display:none">删除案件</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-ghost" id="cancelCaseModal">取消</button>
+        <button class="btn btn-primary" id="saveCaseBtn">保存案件</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 我方主体 Modal ===== -->
+  <div class="modal-overlay" id="partyModal" style="display:none">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h2>我方主体管理</h2>
+        <button class="modal-close" id="closePartyModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 主体列表 -->
+        <div id="partyListSection">
+          <div class="party-list-header">
+            <span>已录入主体</span>
+            <button class="btn btn-primary btn-sm" id="btnAddParty">＋ 新增主体</button>
+          </div>
+          <table class="party-table" id="partyTable">
+            <thead>
+              <tr>
+                <th>公司名称</th>
+                <th>社会信用代码</th>
+                <th>法定代表人</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="partyTableBody"></tbody>
+          </table>
+          <p class="empty-party" id="emptyParty" style="display:none">暂无主体，点击「新增主体」添加</p>
+        </div>
+
+        <!-- 新增/编辑主体表单 -->
+        <div id="partyFormSection" style="display:none">
+          <h3 id="partyFormTitle" class="section-title">新增主体</h3>
+          <form id="partyForm" novalidate>
+            <input type="hidden" id="partyId" />
+            <div class="form-group">
+              <label>公司名称 <span class="required">*</span></label>
+              <input type="text" id="partyCompanyName" placeholder="请输入公司全称" />
+              <span class="field-error" id="partyNameErr"></span>
+            </div>
+            <div class="form-group">
+              <label>社会信用代码</label>
+              <input type="text" id="partyCreditCode" placeholder="18位统一社会信用代码" />
+            </div>
+            <div class="form-group">
+              <label>法定代表人</label>
+              <input type="text" id="partyLegalRep" placeholder="法定代表人姓名" />
+            </div>
+            <div class="form-group">
+              <label>住所</label>
+              <input type="text" id="partyAddress" placeholder="公司注册住所" />
+            </div>
+          </form>
+          <div class="form-actions">
+            <button class="btn btn-ghost" id="cancelPartyForm">取消</button>
+            <button class="btn btn-primary" id="savePartyBtn">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 办案人管理 Modal ===== -->
+  <div class="modal-overlay" id="handlerModal" style="display:none">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h2>办案人管理</h2>
+        <button class="modal-close" id="closeHandlerModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 列表 -->
+        <div id="handlerListSection">
+          <div class="party-list-header">
+            <span>已录入办案人</span>
+            <button class="btn btn-primary btn-sm" id="btnAddHandler">＋ 新增办案人</button>
+          </div>
+          <table class="party-table" id="handlerTable">
+            <thead>
+              <tr>
+                <th>办案人</th>
+                <th>身份证号</th>
+                <th>办案人电话</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="handlerTableBody"></tbody>
+          </table>
+          <p class="empty-party" id="emptyHandler" style="display:none">暂无办案人，点击「新增办案人」添加</p>
+        </div>
+
+        <!-- 新增/编辑表单 -->
+        <div id="handlerFormSection" style="display:none">
+          <h3 id="handlerFormTitle" class="section-title">新增办案人</h3>
+          <form id="handlerForm" novalidate>
+            <input type="hidden" id="handlerId" />
+            <div class="form-group">
+              <label>办案人姓名 <span class="required">*</span></label>
+              <input type="text" id="handlerName" placeholder="请输入姓名" />
+              <span class="field-error" id="handlerNameErr"></span>
+            </div>
+            <div class="form-group">
+              <label>身份证号</label>
+              <input type="text" id="handlerIdCard" placeholder="18位身份证号码" />
+            </div>
+            <div class="form-group">
+              <label>办案人电话</label>
+              <input type="text" id="handlerPhone" placeholder="联系电话" />
+            </div>
+          </form>
+          <div class="form-actions">
+            <button class="btn btn-ghost" id="cancelHandlerForm">取消</button>
+            <button class="btn btn-primary" id="saveHandlerBtn">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 批量录入 Modal ===== -->
+  <div class="modal-overlay" id="batchModal" style="display:none">
+    <div class="modal modal-batch">
+      <div class="modal-header">
+        <div>
+          <h2>批量录入案件</h2>
+          <p class="modal-subtitle">可直接从 Excel 复制粘贴数据，支持整列或整区域粘贴</p>
+        </div>
+        <button class="modal-close" id="closeBatchModal">✕</button>
+      </div>
+      <div class="modal-body batch-body">
+        <div class="batch-table-wrap">
+          <table class="batch-table" id="batchTable">
+            <thead>
+              <tr id="batchHeaderRow"></tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+        </div>
+        <div class="add-row-area">
+          <button class="btn btn-ghost btn-sm" id="btnAddBatchRow">＋ 添加</button>
+          <input type="number" id="addRowCount" class="add-row-input" value="1" min="1" max="99" />
+          <span class="add-row-label">行</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="batch-footer-left">
+          <span class="batch-error" id="batchError"></span>
+        </div>
+        <div class="batch-footer-right">
+          <button class="btn btn-ghost" id="cancelBatchModal">取消</button>
+          <button class="btn btn-primary" id="importBatchBtn">导入案件</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="col-float-tooltip"></div>
+
+  <!-- 生成文书浮动按钮 -->
+  <button class="btn-doc-float" id="btnGenDoc">生成文书</button>
+
+  <!-- ===== 文书配置 Modal ===== -->
+  <div class="modal-overlay" id="docModal" style="display:none">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h2>生成文书</h2>
+        <button class="modal-close" id="closeDocModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>选择案件 <span class="required">*</span></label>
+          <select id="docCaseSelect">
+            <option value="">-- 请选择案件 --</option>
+          </select>
+          <span class="field-error" id="docCaseErr"></span>
+        </div>
+        <div class="form-group">
+          <label>选择文书模版 <span class="required">*</span></label>
+          <div class="doc-checkbox-list">
+            <label class="doc-check-item">
+              <input type="checkbox" name="docType" value="答辩状" />
+              <span>答辩状</span>
+            </label>
+            <label class="doc-check-item">
+              <input type="checkbox" name="docType" value="法定代表人身份证明书" />
+              <span>法定代表人身份证明书</span>
+            </label>
+            <label class="doc-check-item">
+              <input type="checkbox" name="docType" value="授权委托书" />
+              <span>授权委托书</span>
+            </label>
+          </div>
+          <span class="field-error" id="docTypeErr"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelDocModal">取消</button>
+        <button class="btn btn-outline" id="previewDocBtn">预览并编辑</button>
+        <button class="btn btn-primary" id="exportDocBtn">导出 Word</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 文书预览编辑 Modal ===== -->
+  <div class="modal-overlay" id="docPreviewModal" style="display:none">
+    <div class="modal modal-preview">
+      <div class="modal-header">
+        <h2>预览并编辑</h2>
+        <button class="modal-close" id="closeDocPreviewModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="doc-tabs" id="docTabs"></div>
+        <div class="doc-panels" id="docPanels"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="backToDocModal">← 返回</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" id="exportFromPreviewBtn">导出 Word</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
